@@ -1,0 +1,43 @@
+{
+  "name": "Recall",
+  "author": "MakeAwesomeHappen",
+  "version": "1.0.0",
+  "keywords": ["pebble-app"],
+  "private": true,
+  "dependencies": {},
+  "pebble": {
+    "displayName": "Recall",
+    "uuid": "6174ca17-8e63-4a2e-a224-2e4f2f6997b2",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "capabilities": ["configurable"],
+    "targetPlatforms": [
+      "aplite",
+      "basalt",
+      "chalk",
+      "diorite",
+      "emery",
+      "flint",
+      "gabbro"
+    ],
+    "watchapp": {
+      "watchface": false
+    },
+    "messageKeys": [
+      "AppKeyAction",
+      "AppKeyStatus",
+      "AppKeyDeckId",
+      "AppKeyName",
+      "AppKeyCardCount",
+      "AppKeyCardId",
+      "AppKeyFront",
+      "AppKeyBack",
+      "AppKeyRating",
+      "AppKeyIndex",
+      "AppKeyTotal"
+    ],
+    "resources": {
+      "media": []
+    }
+  }
+}
