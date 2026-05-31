@@ -9,6 +9,14 @@ var CONFIG_PAGE_URL = "https://silentjay.github.io/Recall/config-page/index.html
 
 Pebble.addEventListener('ready', function(e) {
   console.log('PebbleKit JS ready!');
+  console.log('Config: URL=' + WEB_APP_URL + ', Token=' + (SECRET_TOKEN ? '***' : 'empty'));
+  if (!WEB_APP_URL) {
+    // Notify the watch that config is needed
+    Pebble.sendAppMessage({
+      "AppKeyStatus": "error",
+      "AppKeyFront": "Config app on phone"
+    });
+  }
 });
 
 Pebble.addEventListener('showConfiguration', function() {

@@ -42,11 +42,10 @@ static void send_rating(int rating) {
   loading_window_push("Saving...");
   
   DictionaryIterator *iter;
-  app_message_outbox_begin(&iter);
-  if (iter) {
-    dict_write_cstring(iter, AppKeyAction, "review");
-    dict_write_int32(iter, AppKeyCardId, s_cards[s_current_card_idx].id);
-    dict_write_int32(iter, AppKeyRating, rating);
+  if (app_message_outbox_begin(&iter) == APP_MSG_OK) {
+    dict_write_cstring(iter, MESSAGE_KEY_AppKeyAction, "review");
+    dict_write_int32(iter, MESSAGE_KEY_AppKeyCardId, s_cards[s_current_card_idx].id);
+    dict_write_int32(iter, MESSAGE_KEY_AppKeyRating, rating);
     app_message_outbox_send();
   }
 }

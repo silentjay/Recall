@@ -1,6 +1,9 @@
 #pragma once
 #include <pebble.h>
 
+// Use auto-generated message keys from package.json
+#include "message_keys.auto.h"
+
 #define MAX_DECKS 10
 #define MAX_CARDS 50
 #define MAX_TEXT_LEN 100
@@ -17,25 +20,12 @@ typedef struct {
   char back[MAX_TEXT_LEN];
 } Card;
 
-// Global state arrays (in real life, we might want to malloc these or persist them)
+// Global state arrays
 extern Deck s_decks[MAX_DECKS];
 extern int s_num_decks;
 
 extern Card s_cards[MAX_CARDS];
 extern int s_num_cards;
-
-// AppMessage Keys (mapped from package.json)
-#define AppKeyAction 0
-#define AppKeyStatus 1
-#define AppKeyDeckId 2
-#define AppKeyName 3
-#define AppKeyCardCount 4
-#define AppKeyCardId 5
-#define AppKeyFront 6
-#define AppKeyBack 7
-#define AppKeyRating 8
-#define AppKeyIndex 9
-#define AppKeyTotal 10
 
 // Window forward declarations
 void loading_window_push(const char *message);

@@ -23,10 +23,9 @@ static void menu_select_callback(MenuLayer *menu_layer, MenuIndex *cell_index, v
     loading_window_push("Loading cards...");
     
     DictionaryIterator *iter;
-    app_message_outbox_begin(&iter);
-    if (iter) {
-      dict_write_cstring(iter, AppKeyAction, "get_due");
-      dict_write_int32(iter, AppKeyDeckId, s_decks[idx].id);
+    if (app_message_outbox_begin(&iter) == APP_MSG_OK) {
+      dict_write_cstring(iter, MESSAGE_KEY_AppKeyAction, "get_due");
+      dict_write_int32(iter, MESSAGE_KEY_AppKeyDeckId, s_decks[idx].id);
       app_message_outbox_send();
     }
   }
