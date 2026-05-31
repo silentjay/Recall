@@ -5,7 +5,7 @@ var WEB_APP_URL = localStorage.getItem('webAppUrl') || "";
 var SECRET_TOKEN = localStorage.getItem('secretToken') || "";
 
 // Change this to your GitHub Pages URL once deployed!
-var CONFIG_PAGE_URL = "https://your-github-username.github.io/Recall/config-page/index.html";
+var CONFIG_PAGE_URL = "https://silentjay.github.io/Recall/config-page/index.html";
 
 Pebble.addEventListener('ready', function(e) {
   console.log('PebbleKit JS ready!');

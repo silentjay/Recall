@@ -3,3 +3,4 @@ node_modules/
 *.pyc
 .env
 .DS_Store
+.lock-waf_*
