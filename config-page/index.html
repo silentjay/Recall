@@ -6,31 +6,71 @@
   <style>
     body { font-family: sans-serif; padding: 20px; background-color: #f8f8f8; color: #333; }
     .container { max-width: 400px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    h2 { margin-top: 0; color: #000; }
+    h2 { margin-top: 0; color: #000; display: flex; justify-content: space-between; align-items: center; }
+    
+    .tabs { display: flex; margin-bottom: 20px; border-bottom: 1px solid #ccc; }
+    .tab { padding: 10px 20px; cursor: pointer; border-bottom: 3px solid transparent; }
+    .tab.active { border-bottom-color: #ff4700; font-weight: bold; color: #ff4700; }
+    
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
     label { display: block; margin-top: 15px; font-weight: bold; }
-    input[type="text"] { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    input[type="text"], select { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-family: inherit; }
     .hint { font-size: 0.85em; color: #666; margin-top: 5px; display: block; }
     button { display: block; width: 100%; background: #ff4700; color: white; border: none; padding: 12px; margin-top: 25px; border-radius: 4px; font-size: 16px; cursor: pointer; font-weight: bold; }
     button:hover { background: #e03f00; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    
+    #statusMsg { margin-top: 15px; padding: 10px; border-radius: 4px; display: none; }
+    #statusMsg.success { background: #e6ffed; color: #1e4620; border: 1px solid #c2e6c6; display: block; }
+    #statusMsg.error { background: #ffeef0; color: #b30000; border: 1px solid #ffc2c2; display: block; }
+    #statusMsg.info { background: #e6f7ff; color: #0050b3; border: 1px solid #91d5ff; display: block; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>Recall Settings</h2>
+    <h2>Recall <span style="font-size: 0.6em; font-weight: normal; color: #888;">Config</span></h2>
     
-    <label for="webAppUrl">Google Apps Script URL</label>
-    <input type="text" id="webAppUrl" placeholder="https://script.google.com/macros/s/..." />
-    <span class="hint">The URL you received after deploying your Google Apps Script as a Web App.</span>
+    <div class="tabs">
+      <div class="tab active" data-target="settings-tab">Settings</div>
+      <div class="tab" data-target="cards-tab" id="cardsTabBtn">Manage Cards</div>
+    </div>
+    
+    <div id="settings-tab" class="tab-content active">
+      <label for="webAppUrl">Google Apps Script URL</label>
+      <input type="text" id="webAppUrl" placeholder="https://script.google.com/macros/s/..." />
+      <span class="hint">The URL you received after deploying your Google Apps Script as a Web App.</span>
 
-    <label for="secretToken">Secret Token</label>
-    <input type="text" id="secretToken" placeholder="your-secret-token" />
-    <span class="hint">The secret token you defined in the Google Apps Script.</span>
+      <label for="secretToken">Secret Token</label>
+      <input type="text" id="secretToken" placeholder="your-secret-token" />
+      <span class="hint">The secret token you defined in the Google Apps Script.</span>
 
-    <button id="saveBtn">Save Settings</button>
+      <button id="saveBtn">Save Settings</button>
+    </div>
+
+    <div id="cards-tab" class="tab-content">
+      <p style="margin-top:0; font-size: 0.9em; color: #555;">Add new flashcards to your Google Sheet.</p>
+      
+      <label for="deckSelect">Deck</label>
+      <select id="deckSelect">
+        <option value="">Loading decks...</option>
+      </select>
+      
+      <label for="cardFront">Front (Question)</label>
+      <input type="text" id="cardFront" placeholder="Enter question..." maxlength="100" />
+      
+      <label for="cardBack">Back (Answer)</label>
+      <input type="text" id="cardBack" placeholder="Enter answer..." maxlength="100" />
+      
+      <button id="addCardBtn">Add Card</button>
+      
+      <div id="statusMsg"></div>
+    </div>
   </div>
 
   <script>
-    // Get URL parameters (if Pebble passes existing config)
+    // Get URL parameters
     function getQueryParam(variable, defaultValue) {
       var query = location.search.substring(1);
       var vars = query.split('&');
@@ -43,22 +83,154 @@
       return defaultValue || '';
     }
 
-    // Populate existing values
+    // --- Settings Tab Logic ---
     document.getElementById('webAppUrl').value = getQueryParam('webAppUrl', '');
     document.getElementById('secretToken').value = getQueryParam('secretToken', '');
 
-    // Save button click
     document.getElementById('saveBtn').addEventListener('click', function() {
       var options = {
         webAppUrl: document.getElementById('webAppUrl').value.trim(),
         secretToken: document.getElementById('secretToken').value.trim()
       };
 
-      // Ensure it's a valid return URL (either Pebble app or pebblejs emulator)
       var return_to = getQueryParam('return_to', 'pebblejs://close#');
-      
-      // Redirect back to Pebble app with settings encoded
       document.location = return_to + encodeURIComponent(JSON.stringify(options));
+    });
+
+    // --- Tabs Logic ---
+    var tabs = document.querySelectorAll('.tab');
+    var contents = document.querySelectorAll('.tab-content');
+    
+    tabs.forEach(function(tab) {
+      tab.addEventListener('click', function() {
+        tabs.forEach(t => t.classList.remove('active'));
+        contents.forEach(c => c.classList.remove('active'));
+        
+        tab.classList.add('active');
+        document.getElementById(tab.getAttribute('data-target')).classList.add('active');
+        
+        // Load decks when switching to cards tab for the first time
+        if (tab.id === 'cardsTabBtn' && !window.decksLoaded) {
+          loadDecks();
+        }
+      });
+    });
+
+    // --- Cards Tab Logic ---
+    function showStatus(message, type) {
+      var el = document.getElementById('statusMsg');
+      el.textContent = message;
+      el.className = type; // 'success', 'error', 'info', or empty
+      
+      if (type === 'success' || type === 'error') {
+        setTimeout(() => { el.className = ''; }, 5000);
+      }
+    }
+
+    function getCredentials() {
+      return {
+        url: document.getElementById('webAppUrl').value.trim(),
+        token: document.getElementById('secretToken').value.trim()
+      };
+    }
+
+    function loadDecks() {
+      var creds = getCredentials();
+      if (!creds.url || !creds.token) {
+        showStatus('Please configure and save settings first.', 'error');
+        return;
+      }
+
+      showStatus('Loading decks...', 'info');
+      var deckSelect = document.getElementById('deckSelect');
+      deckSelect.innerHTML = '<option value="">Loading...</option>';
+      deckSelect.disabled = true;
+
+      fetch(creds.url + '?action=get_decks&token=' + encodeURIComponent(creds.token))
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) throw new Error(data.error);
+          
+          deckSelect.innerHTML = '';
+          if (data.length === 0) {
+            deckSelect.innerHTML = '<option value="">No decks found</option>';
+          } else {
+            data.forEach(deck => {
+              var opt = document.createElement('option');
+              opt.value = deck.id;
+              opt.textContent = deck.name;
+              deckSelect.appendChild(opt);
+            });
+            deckSelect.disabled = false;
+          }
+          window.decksLoaded = true;
+          document.getElementById('statusMsg').className = ''; // hide info
+        })
+        .catch(err => {
+          console.error(err);
+          deckSelect.innerHTML = '<option value="">Error loading decks</option>';
+          showStatus('Failed to load decks: ' + err.message, 'error');
+        });
+    }
+
+    document.getElementById('addCardBtn').addEventListener('click', function() {
+      var creds = getCredentials();
+      if (!creds.url || !creds.token) {
+        showStatus('Please configure and save settings first.', 'error');
+        return;
+      }
+
+      var deckId = document.getElementById('deckSelect').value;
+      var front = document.getElementById('cardFront').value.trim();
+      var back = document.getElementById('cardBack').value.trim();
+
+      if (!deckId) {
+        showStatus('Please select a deck.', 'error');
+        return;
+      }
+      if (!front || !back) {
+        showStatus('Please enter both Front and Back text.', 'error');
+        return;
+      }
+
+      var btn = document.getElementById('addCardBtn');
+      btn.disabled = true;
+      btn.textContent = 'Adding...';
+      showStatus('Adding card...', 'info');
+
+      var payload = {
+        action: 'add_card',
+        token: creds.token,
+        deck_id: deckId,
+        front: front,
+        back: back
+      };
+
+      fetch(creds.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload)
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) throw new Error(data.error);
+          if (data.success) {
+            showStatus('Card added successfully!', 'success');
+            document.getElementById('cardFront').value = '';
+            document.getElementById('cardBack').value = '';
+            document.getElementById('cardFront').focus();
+          } else {
+            throw new Error('Unknown error adding card');
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          showStatus('Failed to add card: ' + err.message, 'error');
+        })
+        .finally(() => {
+          btn.disabled = false;
+          btn.textContent = 'Add Card';
+        });
     });
   </script>
 </body>

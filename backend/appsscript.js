@@ -25,6 +25,9 @@ function doGet(e) {
   if (action === "get_due") {
     const deckId = e.parameter.deck_id;
     return getDueCards(deckId);
+  } else if (action === "get_cards") {
+    const deckId = e.parameter.deck_id;
+    return getCards(deckId);
   } else if (action === "get_decks") {
     return getDecks();
   }
@@ -44,6 +47,8 @@ function doPost(e) {
 
     if (data.action === "review") {
       return processReview(data.card_id, data.rating);
+    } else if (data.action === "add_card") {
+      return addCard(data.deck_id, data.front, data.back);
     }
     
     return ContentService.createTextOutput(JSON.stringify({error: "Unknown action"}))
@@ -106,6 +111,70 @@ function getDueCards(deckId) {
   }
   
   return jsonResponse(cards);
+}
+
+function getCards(deckId) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Cards");
+  if (!sheet) return jsonResponse({error: "Cards sheet not found"});
+  
+  const data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return jsonResponse([]);
+  
+  const headers = data[0];
+  const cards = [];
+  
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const card = {};
+    for (let j = 0; j < headers.length; j++) {
+      card[headers[j]] = row[j];
+    }
+    
+    // Check if card matches deck_id (if provided)
+    if (!deckId || String(card.deck_id) === String(deckId)) {
+      cards.push(card);
+    }
+  }
+  
+  return jsonResponse(cards);
+}
+
+function addCard(deckId, front, back) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Cards");
+  if (!sheet) return jsonResponse({error: "Cards sheet not found"});
+  
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  
+  let maxId = 0;
+  for (let i = 1; i < data.length; i++) {
+    const id = parseInt(data[i][headers.indexOf("id")], 10);
+    if (!isNaN(id) && id > maxId) {
+      maxId = id;
+    }
+  }
+  
+  const newId = maxId + 1;
+  const today = new Date().toISOString().split('T')[0];
+  
+  const newRow = [];
+  for (let j = 0; j < headers.length; j++) {
+    const header = headers[j];
+    if (header === "id") newRow.push(newId);
+    else if (header === "deck_id") newRow.push(deckId);
+    else if (header === "front") newRow.push(front);
+    else if (header === "back") newRow.push(back);
+    else if (header === "interval") newRow.push(0);
+    else if (header === "ease_factor") newRow.push(2.5);
+    else if (header === "repetitions") newRow.push(0);
+    else if (header === "due_date") newRow.push(today);
+    else if (header === "created") newRow.push(today);
+    else newRow.push("");
+  }
+  
+  sheet.appendRow(newRow);
+  
+  return jsonResponse({success: true, id: newId});
 }
 
 function processReview(cardId, rating) {
